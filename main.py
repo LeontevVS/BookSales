@@ -32,13 +32,24 @@ def insert_test_data(session):
     session.commit()
 
 def print_publisher_sales(session):
-    publisher_id = int(input("Введите id автора: "))
-    subq_books = session.query(Book).filter(Book.id_publisher == publisher_id).subquery("publisher_books")
-    subq_stocks = session.query(Stock).join(subq_books, Stock.id_book == subq_books.c.id).subquery("books_in_stocks")
-    q = session.query(Sale).join(subq_stocks, Sale.id_stock == subq_stocks.c.id)
+    user_input = input("Введите id или имя автора: ")
+    try:
+        search_data = int(user_input)
+    except:
+        search_data = user_input
+    q = session.query(
+        Book.title, 
+        Shop.name, 
+        Sale.price, 
+        Sale.date_sale
+        ).select_from(Publisher).\
+            join(Book, Publisher.id == Book.id_publisher).\
+            join(Stock, Stock.id_book == Book.id).\
+            join(Shop, Shop.id == Stock.id_shop).\
+            join(Sale, Sale.id_stock == Stock.id).\
+            filter(Publisher.id == search_data if isinstance(search_data, int) else Publisher.name == search_data)
     for item in q.all():
-        date_sale = f"{item.date_sale.day}-{item.date_sale.month}-{item.date_sale.year}"
-        print(f"{item.stock.book.title} | {item.stock.shop.name} | {item.price} | {date_sale}")
+        print(f"{item[0]: <40} | {item[1]: <10} | {item[2]: <8} | {item[3].strftime('%d-%m-%Y')}")
 
 if __name__ == '__main__':
     engine = create_engine(get_dns())
